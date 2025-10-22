@@ -6,7 +6,11 @@ const fetch = require('node-fetch');
 const app = express();
 
 // GPIO setup (adjust pin 26 to your relay pin)
-const relay = new Gpio(26, 'out');
+// Use gpiochip0 for modern Raspberry Pi OS
+const relay = new Gpio(26, 'out', {
+  activeLow: false,
+  reconfigureDirection: false
+});
 
 // Configuration
 const PIALERT_API_URL = process.env.PIALERT_API_URL || 'http://localhost:8000/api/v1/alert-status';

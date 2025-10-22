@@ -1,18 +1,16 @@
-version: '3.8'
-
 services:
   relay-controller:
     build: .
     container_name: pialert-relay
     privileged: true
     devices:
-      - /dev/gpiochip0
-      - /dev/mem
+      - /dev/gpiochip0:/dev/gpiochip0
     volumes:
-      - /sys:/sys
+      - /sys/class/gpio:/sys/class/gpio
+      - /sys/devices:/sys/devices
     environment:
-      - PIALERT_API_URL=http://webstatus.online/api/v1/alert-status
-      - PIALERT_API_KEY=Bh_HaC9ss3UMH8WhLKRk-awpX23Fxzd9YkgM6H1V3P4
+      - PIALERT_API_URL=http://your-pialert-ip:8000/api/v1/alert-status
+      - PIALERT_API_KEY=your-api-key-here
       - POLL_INTERVAL=30000
     ports:
       - "5000:5000"
