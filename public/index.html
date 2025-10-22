@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PiAlert Relay Controller</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .status-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: center;
+      border: 2px solid #e9ecef;
+    }
+
+    .relay-status {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .relay-status.on {
+      color: #dc3545;
+    }
+
+    .relay-status.off {
+      color: #28a745;
+    }
+
+    .status-label {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .last-update {
+      font-size: 12px;
+      color: #999;
+      margin-top: 15px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-on {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-on:hover {
+      background: #c82333;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-off {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-off:hover {
+      background: #218838;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-toggle {
+      grid-column: 1 / -1;
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-toggle:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+
+    .alert-section {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .alert-section.show {
+      display: block;
+    }
+
+    .alert-title {
+      font-weight: 600;
+      color: #856404;
+      margin-bottom: 10px;
+    }
+
+    .alert-targets {
+      color: #856404;
+      font-size: 13px;
+    }
+
+    .alert-targets li {
+      list-style: none;
+      margin-bottom: 5px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .alert-targets li:before {
+      content: "⚠️";
+      position: absolute;
+      left: 0;
+    }
+
+    .history-section {
+      margin-top: 30px;
+      border-top: 2px solid #e9ecef;
+      padding-top: 30px;
+    }
+
+    .history-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .history-list {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+    }
+
+    .history-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-time {
+      color: #999;
+      min-width: 120px;
+    }
+
+    .history-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-on {
+      background: #dc3545;
+      color: white;
+    }
+
+    .badge-off {
+      background: #28a745;
+      color: white;
+    }
+
+    .badge-error {
+      background: #ffc107;
+      color: #333;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚨 PiAlert Relay Controller</h1>
+    <p class="subtitle">Real-time monitoring relay control</p>
+
+    <div class="status-card" id="statusCard">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading status...</p>
+      </div>
+    </div>
+
+    <div class="alert-section" id="alertSection">
+      <div class="alert-title">⚠️ Active Alerts</div>
+      <ul class="alert-targets" id="alertTargets"></ul>
+    </div>
+
+    <div class="controls">
+      <button class="btn-on" onclick="setRelay('on')">Turn ON</button>
+      <button class="btn-off" onclick="setRelay('off')">Turn OFF</button>
+      <button class="btn-toggle" onclick="toggleRelay()">Toggle</button>
+    </div>
+
+    <div class="history-section">
+      <div class="history-title">📊 Poll History</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <script>
+    const updateInterval = 5000; // Update UI every 5 seconds
+
+    async function loadStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        updateStatusDisplay(data);
+      } catch (error) {
+        console.error('Failed to load status:', error);
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const response = await fetch('/api/history');
+        const history = await response.json();
+        updateHistoryDisplay(history);
+      } catch (error) {
+        console.error('Failed to load history:', error);
+      }
+    }
+
+    function updateStatusDisplay(data) {
+      const statusCard = document.getElementById('statusCard');
+      const relayState = data.relay_state;
+      const lastPoll = data.last_poll ? new Date(data.last_poll).toLocaleTimeString() : 'Never';
+
+      const statusHtml = `
+        <div class="relay-status ${relayState ? 'on' : 'off'}">
+          ${relayState ? '🔴' : '🟢'}
+        </div>
+        <div class="status-label">${relayState ? 'RELAY ON' : 'RELAY OFF'}</div>
+        ${data.alert_data ? `
+          <div style="font-size: 14px; color: #666; margin: 10px 0;">
+            ${data.alert_data.failing_count} target(s) down
+          </div>
+        ` : ''}
+        <div class="last-update">Last update: ${lastPoll}</div>
+      `;
+
+      statusCard.innerHTML = statusHtml;
+
+      // Update alerts section
+      const alertSection = document.getElementById('alertSection');
+      if (data.alert_data && data.alert_data.alert && data.alert_data.failing_targets.length > 0) {
+        alertSection.classList.add('show');
+        const targetsList = data.alert_data.failing_targets
+          .map(t => `<li>${t.name}: ${t.failures}/${t.threshold} failures</li>`)
+          .join('');
+        document.getElementById('alertTargets').innerHTML = targetsList;
+      } else {
+        alertSection.classList.remove('show');
+      }
+    }
+
+    function updateHistoryDisplay(history) {
+      const historyList = document.getElementById('historyList');
+      const items = history.slice(0, 10).map(item => {
+        let badge = '';
+        if (!item.success) {
+          badge = '<span class="history-badge badge-error">ERROR</span>';
+        } else if (item.relay_state === 'ON') {
+          badge = '<span class="history-badge badge-on">ON</span>';
+        } else {
+          badge = '<span class="history-badge badge-off">OFF</span>';
+        }
+
+        const time = new Date(item.timestamp).toLocaleTimeString();
+        const error = item.error ? ` - ${item.error}` : '';
+
+        return `
+          <div class="history-item">
+            <span class="history-time">${time}</span>
+            <span>${badge}${error}</span>
+          </div>
+        `;
+      }).join('');
+
+      historyList.innerHTML = items || '<div class="history-item">No history yet</div>';
+    }
+
+    async function setRelay(state) {
+      try {
+        const endpoint = state === 'on' ? '/api/relay/on' : '/api/relay/off';
+        await fetch(endpoint, { method: 'POST' });
+        loadStatus();
+      } catch (error) {
+        console.error('Failed to set relay:', error);
+      }
+    }
+
+    async function toggleRelay() {
+      try {
+        await fetch('/api/relay/toggle', { method: 'POST' });
+        loadStatus();
+      } catch (error) {
+        console.error('Failed to toggle relay:', error);
+      }
+    }
+
+    // Initial load and setup auto-refresh
+    loadStatus();
+    loadHistory();
+    setInterval(() => {
+      loadStatus();
+      loadHistory();
+    }, updateInterval);
+  </script>
+</body>
+</html>
