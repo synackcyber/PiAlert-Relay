@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# Install build dependencies required for onoff
-RUN apk add --no-cache python3 make g++ linux-headers
+# Install libgpiod tools for GPIO access
+RUN apk add --no-cache libgpiod
 
 WORKDIR /app
 

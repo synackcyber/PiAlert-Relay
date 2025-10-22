@@ -1,16 +1,25 @@
 const express = require('express');
-const Gpio = require('onoff').Gpio;
+const { execSync } = require('child_process');
 const path = require('path');
 const fetch = require('node-fetch');
 
 const app = express();
 
-// GPIO setup (adjust pin 26 to your relay pin)
-// Use gpiochip0 for modern Raspberry Pi OS
-const relay = new Gpio(26, 'out', {
-  activeLow: false,
-  reconfigureDirection: false
-});
+// GPIO setup using libgpiod command-line tools (modern GPIO interface)
+const GPIO_CHIP = 'gpiochip0';
+const GPIO_PIN = 26;
+
+// Helper function to set GPIO value
+function setGPIO(value) {
+  try {
+    execSync(`gpioset ${GPIO_CHIP} ${GPIO_PIN}=${value}`, { timeout: 1000 });
+  } catch (error) {
+    console.error(`GPIO error: ${error.message}`);
+  }
+}
+
+// Initialize GPIO to OFF state
+setGPIO(0);
 
 // Configuration
 const PIALERT_API_URL = process.env.PIALERT_API_URL || 'http://localhost:8000/api/v1/alert-status';
@@ -73,7 +82,7 @@ setInterval(async () => {
 
     // Control relay based on alert state
     if (data.alert) {
-      relay.writeSync(1);
+      setGPIO(1);
       relayState = true;
       const targetNames = data.failing_targets
         .map(t => `${t.name} (${t.failures}/${t.threshold})`)
@@ -82,7 +91,7 @@ setInterval(async () => {
       pollEntry.relay_state = 'ON';
       pollEntry.alert = true;
     } else {
-      relay.writeSync(0);
+      setGPIO(0);
       relayState = false;
       console.log(`🟢 RELAY OFF - All systems operational`);
       pollEntry.relay_state = 'OFF';
@@ -94,7 +103,7 @@ setInterval(async () => {
 
   } catch (error) {
     console.error(`⚠️  Polling error: ${error.message}`);
-    relay.writeSync(0);
+    setGPIO(0);
     relayState = false;
     pollHistory.unshift({
       timestamp: new Date().toISOString(),
@@ -126,21 +135,21 @@ app.get('/api/history', (req, res) => {
 });
 
 app.post('/api/relay/toggle', (req, res) => {
-  relay.writeSync(relayState ? 0 : 1);
+  setGPIO(relayState ? 0 : 1);
   relayState = !relayState;
   console.log(`📌 Manual override: Relay ${relayState ? 'ON' : 'OFF'}`);
   res.json({ relay_state: relayState, manual_override: true });
 });
 
 app.post('/api/relay/on', (req, res) => {
-  relay.writeSync(1);
+  setGPIO(1);
   relayState = true;
   console.log(`📌 Manual override: Relay ON`);
   res.json({ relay_state: true, manual_override: true });
 });
 
 app.post('/api/relay/off', (req, res) => {
-  relay.writeSync(0);
+  setGPIO(0);
   relayState = false;
   console.log(`📌 Manual override: Relay OFF`);
   res.json({ relay_state: false, manual_override: true });
@@ -163,6 +172,6 @@ app.listen(5000, () => {
 // Cleanup on exit
 process.on('SIGINT', () => {
   console.log('\n👋 Shutting down...');
-  relay.unexportSync();
+  setGPIO(0);
   process.exit();
 });
